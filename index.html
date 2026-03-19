@@ -239,7 +239,7 @@
           <!-- Cover -->
           <div class="relative">
             <img
-              src="${game.image}"
+              src="${WORKER_URL}/api/steam/image?appid=${game.appid}"
               alt="${escHtml(game.title)}"
               class="w-full h-44 object-cover"
               onerror="this.src='https://via.placeholder.com/460x215/1b2838/66c0f4?text=No+Image'"
