@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Steam Wishlist Deals</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            steam: { DEFAULT: '#1b2838', light: '#2a475e', accent: '#66c0f4', green: '#4caf50' },
+          },
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+        },
+      },
+    };
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    body { background: #0f1923; }
+    .card-hover { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+    .card-hover:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(102,192,244,0.15); }
+    .skeleton { background: linear-gradient(90deg, #1b2838 25%, #2a3f55 50%, #1b2838 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    .badge-deal { background: linear-gradient(135deg, #4caf50, #2e7d32); }
+    .badge-steam { background: linear-gradient(135deg, #66c0f4, #1b6fa8); }
+    input::placeholder { color: #4a6280; }
+    ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: #0f1923; } ::-webkit-scrollbar-thumb { background: #2a475e; border-radius: 3px; }
+  </style>
+</head>
+<body class="min-h-screen text-white font-sans">
+
+  <!-- Header -->
+  <header class="border-b border-steam-light/30 bg-steam/80 backdrop-blur sticky top-0 z-10">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex items-center gap-3">
+      <svg class="w-8 h-8 text-steam-accent" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.031 4.524 4.527s-2.03 4.525-4.524 4.525h-.105l-4.076 2.911c0 .052.004.105.004.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.173-3.331-2.727L.436 15.27C1.862 20.307 6.486 24 11.979 24c6.627 0 11.999-5.373 11.999-12S18.606 0 11.979 0z"/>
+      </svg>
+      <div>
+        <h1 class="text-xl font-bold text-white">Steam Wishlist Deals</h1>
+        <p class="text-xs text-steam-accent/70">Trouve les meilleurs prix pour ta wishlist</p>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero / Search -->
+  <main class="max-w-7xl mx-auto px-4 py-12">
+    <div class="text-center mb-12">
+      <h2 class="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-steam-accent to-blue-300 bg-clip-text text-transparent">
+        Ta wishlist, au meilleur prix
+      </h2>
+      <p class="text-gray-400 text-lg mb-8 max-w-xl mx-auto">
+        Entre ton Steam ID (ou vanity URL) pour comparer les prix de ta liste de souhaits sur toutes les boutiques.
+      </p>
+
+      <!-- Search bar -->
+      <form id="searchForm" class="flex gap-2 max-w-lg mx-auto">
+        <div class="relative flex-1">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+          </svg>
+          <input
+            id="steamIdInput"
+            type="text"
+            placeholder="Steam ID (ex: 76561198xxxxxxxxx)"
+            class="w-full bg-steam-light/50 border border-steam-light rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-steam-accent focus:ring-1 focus:ring-steam-accent transition"
+          />
+        </div>
+        <button
+          type="submit"
+          id="searchBtn"
+          class="bg-steam-accent text-steam font-semibold px-6 py-3 rounded-xl hover:bg-blue-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+        >
+          <span id="btnText">Analyser</span>
+          <svg id="btnSpinner" class="hidden w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+          </svg>
+        </button>
+      </form>
+
+      <p class="text-xs text-gray-600 mt-3">
+        Ton profil Steam doit être <span class="text-steam-accent">public</span> pour que la wishlist soit accessible.
+      </p>
+    </div>
+
+    <!-- Error banner -->
+    <div id="errorBanner" class="hidden max-w-lg mx-auto mb-8 bg-red-900/40 border border-red-700 text-red-300 rounded-xl px-5 py-4 flex items-start gap-3">
+      <svg class="w-5 h-5 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+      </svg>
+      <span id="errorMsg"></span>
+    </div>
+
+    <!-- Stats bar -->
+    <div id="statsBar" class="hidden mb-6 flex flex-wrap gap-4 items-center justify-between">
+      <div class="flex gap-4 flex-wrap">
+        <span class="bg-steam-light/40 rounded-lg px-3 py-1.5 text-sm text-gray-300">
+          🎮 <span id="statTotal">0</span> jeux
+        </span>
+        <span class="bg-steam-light/40 rounded-lg px-3 py-1.5 text-sm text-gray-300">
+          💰 <span id="statDeals">0</span> deals trouvés
+        </span>
+        <span class="bg-green-900/40 border border-green-800 rounded-lg px-3 py-1.5 text-sm text-green-400">
+          🏷️ Économies potentielles : <span id="statSavings">0 €</span>
+        </span>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="sortGames('savings')" class="sort-btn text-xs bg-steam-light/40 hover:bg-steam-light/60 rounded-lg px-3 py-1.5 transition" data-sort="savings">Meilleures économies</button>
+        <button onclick="sortGames('price')" class="sort-btn text-xs bg-steam-light/40 hover:bg-steam-light/60 rounded-lg px-3 py-1.5 transition" data-sort="price">Prix croissant</button>
+        <button onclick="sortGames('name')" class="sort-btn text-xs bg-steam-light/40 hover:bg-steam-light/60 rounded-lg px-3 py-1.5 transition" data-sort="name">A → Z</button>
+      </div>
+    </div>
+
+    <!-- Skeleton loaders -->
+    <div id="skeletonGrid" class="hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <!-- 8 skeleton cards -->
+    </div>
+
+    <!-- Results grid -->
+    <div id="resultsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>
+
+    <!-- Empty state -->
+    <div id="emptyState" class="hidden text-center py-16 text-gray-500">
+      <svg class="w-16 h-16 mx-auto mb-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+      </svg>
+      <p class="text-lg">La wishlist est vide.</p>
+    </div>
+  </main>
+
+  <footer class="text-center text-xs text-gray-700 py-8">
+    Prix fournis par <a href="https://isthereanydeal.com" target="_blank" class="text-steam-accent/50 hover:text-steam-accent">IsThereAnyDeal</a> · Données Steam publiques uniquement
+  </footer>
+
+  <script>
+    // ─── CONFIG ───────────────────────────────────────────────────────────────
+    const WORKER_URL = 'https://TON-WORKER.TON-SUBDOMAIN.workers.dev'; // ← remplace ici
+
+    // ─── STATE ────────────────────────────────────────────────────────────────
+    let allGames = [];
+    let currentSort = 'savings';
+
+    // ─── DOM refs ─────────────────────────────────────────────────────────────
+    const form         = document.getElementById('searchForm');
+    const input        = document.getElementById('steamIdInput');
+    const searchBtn    = document.getElementById('searchBtn');
+    const btnText      = document.getElementById('btnText');
+    const btnSpinner   = document.getElementById('btnSpinner');
+    const errorBanner  = document.getElementById('errorBanner');
+    const errorMsg     = document.getElementById('errorMsg');
+    const statsBar     = document.getElementById('statsBar');
+    const skeletonGrid = document.getElementById('skeletonGrid');
+    const resultsGrid  = document.getElementById('resultsGrid');
+    const emptyState   = document.getElementById('emptyState');
+
+    // ─── SKELETON ─────────────────────────────────────────────────────────────
+    function buildSkeletons(n = 8) {
+      skeletonGrid.innerHTML = Array.from({ length: n }, () => `
+        <div class="bg-steam-light/20 rounded-2xl overflow-hidden border border-white/5">
+          <div class="skeleton h-44 w-full"></div>
+          <div class="p-4 space-y-3">
+            <div class="skeleton h-4 rounded w-3/4"></div>
+            <div class="skeleton h-3 rounded w-1/2"></div>
+            <div class="skeleton h-8 rounded-lg w-full mt-2"></div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // ─── SEARCH ───────────────────────────────────────────────────────────────
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const steamid = input.value.trim();
+      if (!steamid) return;
+
+      setLoading(true);
+      hideError();
+      resetResults();
+
+      try {
+        const res = await fetch(`${WORKER_URL}/api/steam/wishlist?steamid=${encodeURIComponent(steamid)}`);
+        const json = await res.json();
+
+        if (!res.ok) {
+          const msg = json?.error || `Erreur ${res.status}`;
+          if (res.status === 403) showError('Ce profil Steam est privé. Rends ta liste de souhaits publique dans les paramètres Steam.');
+          else if (res.status === 400) showError('Steam ID invalide. Vérifie le format (ex: 76561198xxxxxxxxx).');
+          else showError(msg);
+          return;
+        }
+
+        allGames = json.data || [];
+        if (allGames.length === 0) {
+          emptyState.classList.remove('hidden');
+          return;
+        }
+
+        renderStats();
+        sortGames(currentSort, false);
+        renderGames();
+        statsBar.classList.remove('hidden');
+
+      } catch (err) {
+        showError('Impossible de contacter le serveur. Réessaie dans quelques secondes.');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    // ─── RENDER ───────────────────────────────────────────────────────────────
+    function renderGames() {
+      resultsGrid.innerHTML = allGames.map(game => buildCard(game)).join('');
+    }
+
+    function buildCard(game) {
+      const hasSteamPrice = game.steamPrice != null;
+      const hasDiscount   = game.steamOriginalPrice != null && game.steamDiscount > 0;
+      const hasItad       = game.itadBestPrice != null;
+
+      // Calcul meilleur prix global
+      const prices = [hasSteamPrice ? game.steamPrice : null, hasItad ? game.itadBestPrice : null].filter(p => p !== null);
+      const bestPrice = prices.length ? Math.min(...prices) : null;
+      const isBestOnItad = hasItad && hasSteamPrice && game.itadBestPrice < game.steamPrice;
+      const isFree = hasSteamPrice && game.steamPrice === 0;
+
+      // Badge économie
+      const savings = hasDiscount ? (game.steamOriginalPrice - game.steamPrice).toFixed(2) : null;
+      const itadSavings = (hasSteamPrice && hasItad && game.itadBestPrice < game.steamPrice)
+        ? (game.steamPrice - game.itadBestPrice).toFixed(2) : null;
+
+      return `
+        <div class="card-hover bg-[#1a2534] rounded-2xl overflow-hidden border border-white/5 flex flex-col">
+          <!-- Cover -->
+          <div class="relative">
+            <img
+              src="${game.image}"
+              alt="${escHtml(game.title)}"
+              class="w-full h-44 object-cover"
+              onerror="this.src='https://via.placeholder.com/460x215/1b2838/66c0f4?text=No+Image'"
+            />
+            ${game.steamDiscount > 0 ? `<span class="absolute top-2 right-2 bg-green-600 text-white text-xs font-bold px-2 py-0.5 rounded">-${game.steamDiscount}%</span>` : ''}
+          </div>
+
+          <!-- Content -->
+          <div class="p-4 flex flex-col flex-1 gap-3">
+            <h3 class="font-semibold text-sm leading-snug line-clamp-2 text-white">${escHtml(game.title)}</h3>
+
+            <!-- Prix Steam -->
+            <div class="text-xs text-gray-400">
+              ${isFree
+                ? `<span class="text-green-400 font-semibold">Gratuit</span>`
+                : hasSteamPrice
+                  ? `<span class="text-gray-500">Steam :</span>
+                     ${hasDiscount ? `<span class="line-through text-gray-600 ml-1">${game.steamOriginalPrice.toFixed(2)} €</span>` : ''}
+                     <span class="text-white font-medium ml-1">${game.steamPrice.toFixed(2)} €</span>`
+                  : `<span class="text-gray-600 italic">Prix Steam non dispo</span>`
+              }
+            </div>
+
+            <div class="flex-1"></div>
+
+            <!-- Meilleur deal -->
+            ${hasItad
+              ? `<a href="${game.itadUrl || '#'}" target="_blank" rel="noopener"
+                   class="flex items-center justify-between ${isBestOnItad ? 'badge-deal' : 'bg-steam-light/40'} rounded-xl px-3 py-2 hover:opacity-90 transition">
+                   <div>
+                     <p class="text-xs text-white/70">Meilleur prix</p>
+                     <p class="text-sm font-bold text-white">${game.itadBestPrice.toFixed(2)} €</p>
+                     <p class="text-xs text-white/60">${escHtml(game.itadBestShop)}</p>
+                   </div>
+                   ${itadSavings
+                     ? `<span class="text-xs bg-white/20 rounded-lg px-2 py-1 font-semibold">-${itadSavings} €</span>`
+                     : ''
+                   }
+                   <svg class="w-4 h-4 text-white/60 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                   </svg>
+                 </a>`
+              : `<div class="bg-steam-light/20 rounded-xl px-3 py-2 text-center text-xs text-gray-600 italic">Aucun deal externe trouvé</div>`
+            }
+
+            <!-- Lien Steam -->
+            <a href="https://store.steampowered.com/app/${game.appid}" target="_blank" rel="noopener"
+               class="text-center text-xs text-steam-accent/60 hover:text-steam-accent transition mt-1">
+              Voir sur Steam →
+            </a>
+          </div>
+        </div>
+      `;
+    }
+
+    // ─── SORT ─────────────────────────────────────────────────────────────────
+    function sortGames(type, rerender = true) {
+      currentSort = type;
+
+      // Highlight actif
+      document.querySelectorAll('.sort-btn').forEach(btn => {
+        btn.classList.toggle('bg-steam-accent/20', btn.dataset.sort === type);
+        btn.classList.toggle('text-steam-accent', btn.dataset.sort === type);
+      });
+
+      allGames = [...allGames].sort((a, b) => {
+        if (type === 'savings') {
+          const sa = a.steamPrice != null && a.itadBestPrice != null ? a.steamPrice - a.itadBestPrice : -Infinity;
+          const sb = b.steamPrice != null && b.itadBestPrice != null ? b.steamPrice - b.itadBestPrice : -Infinity;
+          return sb - sa;
+        }
+        if (type === 'price') {
+          const pa = a.itadBestPrice ?? a.steamPrice ?? Infinity;
+          const pb = b.itadBestPrice ?? b.steamPrice ?? Infinity;
+          return pa - pb;
+        }
+        if (type === 'name') return (a.title || '').localeCompare(b.title || '');
+        return 0;
+      });
+
+      if (rerender) renderGames();
+    }
+
+    // ─── STATS ────────────────────────────────────────────────────────────────
+    function renderStats() {
+      document.getElementById('statTotal').textContent = allGames.length;
+
+      const deals = allGames.filter(g => g.itadBestPrice != null).length;
+      document.getElementById('statDeals').textContent = deals;
+
+      const savings = allGames.reduce((acc, g) => {
+        if (g.steamPrice != null && g.itadBestPrice != null && g.itadBestPrice < g.steamPrice) {
+          return acc + (g.steamPrice - g.itadBestPrice);
+        }
+        return acc;
+      }, 0);
+      document.getElementById('statSavings').textContent = savings.toFixed(2) + ' €';
+    }
+
+    // ─── HELPERS ──────────────────────────────────────────────────────────────
+    function setLoading(loading) {
+      searchBtn.disabled = loading;
+      btnText.textContent = loading ? 'Chargement…' : 'Analyser';
+      btnSpinner.classList.toggle('hidden', !loading);
+      skeletonGrid.classList.toggle('hidden', !loading);
+      if (loading) buildSkeletons(8);
+    }
+
+    function showError(msg) {
+      errorMsg.textContent = msg;
+      errorBanner.classList.remove('hidden');
+    }
+    function hideError() { errorBanner.classList.add('hidden'); }
+
+    function resetResults() {
+      resultsGrid.innerHTML = '';
+      statsBar.classList.add('hidden');
+      emptyState.classList.add('hidden');
+      allGames = [];
+    }
+
+    function escHtml(str) {
+      return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+  </script>
+</body>
+</html>
